@@ -27,8 +27,6 @@ import listClass.ListItem;
 
 public class MainActivity extends AppCompatActivity {
 
-
-    //private String URL_DATA = "https://documenter.getpostman.com/view/10808728/SzS8rjbc?version=latest";
     private RecyclerView recyclerView;
     private RecyclerView.Adapter adapter;
     private List<ListItem> listItems;
@@ -47,14 +45,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 loadRecyclerViewData();
+                Toast.makeText(MainActivity.this,"Data Loaded",Toast.LENGTH_SHORT).show();
             }
         });
 
         listItems = new ArrayList<>();
         recyclerView = (RecyclerView)findViewById(R.id.details_recyclerview);
-        linearLayoutManager = new LinearLayoutManager(this);
-        linearLayoutManager.setOrientation(LinearLayoutManager.VERTICAL);
-        dividerItemDecoration = new DividerItemDecoration(recyclerView.getContext(),linearLayoutManager.getOrientation());
+        recyclerView.setHasFixedSize(true);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         adapter = new DetailsRecyclerViewAdapter(listItems,getApplicationContext());
         recyclerView.setAdapter(adapter);
@@ -73,60 +71,38 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setMessage("Loading data...");
         progressDialog.show();
 
-        String URL_DATA = "https://documenter.getpostman.com/view/10808728/SzS8rjbc?version=latest";
+        String URL_DATA = "https://api.covid19api.com/summary";
 
-        JsonArrayRequest jsonArrayRequest = new JsonArrayRequest(URL_DATA
-                , new Response.Listener<JSONArray>() {
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, URL_DATA, new Response.Listener<String>() {
             @Override
-            public void onResponse(JSONArray response) {
+            public void onResponse(String response) {
 
-                for(int i = 0;i<response.length();i++) {
+                try {
 
-                    try {
-
-                        JSONObject jsonObject = response.getJSONObject(i);
-
-                        ListItem listItem = new ListItem();
-
-                        listItem.setCountryName(jsonObject.getString("Country"));
-                        listItem.setTotalCases(jsonObject.getString("TotalConfirmed"));
-                        listItem.setTotalrecovered(jsonObject.getString("TotalRecovered"));
-                        listItem.setTotalDeaths(jsonObject.getString("TotalDeaths"));
-
-                        listItems.add(listItem);
-
-
-
-                    }catch (JSONException e) {
-                        e.printStackTrace();
+                    JSONObject jsonObject = new JSONObject(response);
+                    JSONArray array = jsonObject.getJSONArray("Countries");
+                    for(int i = 0;i<array.length();i++) {
+                        JSONObject object = array.getJSONObject(i);
+                        ListItem item = new ListItem(
+                                object.getString("Country"),
+                                object.getString("TotalConfirmed"),
+                                object.getString("TotalRecovered"),
+                                object.getString("TotalDeaths")
+                        );
+                        listItems.add(item);
+                        adapter = new DetailsRecyclerViewAdapter(listItems, getApplicationContext());
+                        recyclerView.setAdapter(adapter);
                         progressDialog.dismiss();
                     }
 
-                    adapter.notifyDataSetChanged();
-                    progressDialog.dismiss();
+                } catch (JSONException e) {
+
+                    e.printStackTrace();
+
+                }
 
             }
-
-//                    JSONObject jsonObject = new JSONObject(response);
-//                    JSONArray array = jsonObject.getJSONArray("Countries");
-//
-//                    for(int i = 0;i<array.length();i++){
-//                        JSONObject object = array.getJSONObject(i);
-//                        ListItem item = new ListItem(
-//                                object.getString("Country"),
-//                                object.getString("TotalConfirmed"),
-//                                object.getString("TotalRecovered"),
-//                                object.getString("TotalDeaths")
-//                        );
-//
-//                        listItems.add(item);
-//
-//                        adapter = new DetailsRecyclerViewAdapter(listItems,getApplicationContext());
-//
-//                        recyclerView.setAdapter(adapter);
-
-            }
-
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
@@ -135,13 +111,14 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(),error.getMessage(),Toast.LENGTH_LONG).show();
                 progressDialog.dismiss();
 
+
             }
         });
 
         RequestQueue requestQueue = Volley.newRequestQueue(this);
-        requestQueue.add(jsonArrayRequest);
+        requestQueue.add(stringRequest);
 
-    }
+            }
 
 }
 
